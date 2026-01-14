@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POM Collect - Template Editor Demo</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Babel for JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Import Map for Modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.2.0",
+          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+          "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+        }
+      }
+    </script>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+
+    <!-- Application Code -->
+    <script type="text/babel" data-type="module">
+        import React, { useState } from 'react';
+        import ReactDOM from 'react-dom/client';
+        import { 
+          Layout, Type, Image as ImageIcon, List, Save, Eye, Settings, 
+          ChevronLeft, Plus, Move, Trash2, FileText, Mail, Smartphone, 
+          Monitor, CheckCircle, CreditCard, Bold, Italic, AlignLeft, 
+          AlignCenter, AlignRight, QrCode, Home, PieChart, Users, Bell, 
+          Search, Menu, X, LogOut, HelpCircle, File, Zap 
+        } from 'lucide-react';
+
+        // --- DATA & CONFIGURATION ---
+
+        const VARIABLES = [
+          { key: '{{customer.name}}', label: 'Customer Name' },
+          { key: '{{invoice.amount}}', label: 'Invoice Amount' },
+          { key: '{{invoice.number}}', label: 'Invoice Number' },
+          { key: '{{invoice.due_date}}', label: 'Due Date' },
+          { key: '{{payment.link}}', label: 'Payment Link' },
+          { key: '{{payment.qrcode}}', label: 'Payment QR Image' },
+        ];
+
+        const MOCK_DATA = {
+          '{{customer.name}}': 'Sarah Jenkins',
+          '{{invoice.amount}}': '€149.50',
+          '{{invoice.number}}': 'INV-2023-889',
+          '{{invoice.due_date}}': 'Oct 30, 2023',
+          '{{payment.link}}': 'https://pom.eu/pay/xyz',
+        };
+
+        const INITIAL_BLOCKS = [
+          { 
+            id: 101, 
+            type: 'header', 
+            content: 'Payment Request', 
+            style: { textAlign: 'center', fontSize: '24px', fontWeight: 'bold', color: '#111827', marginBottom: '10px' } 
+          },
+          { 
+            id: 102, 
+            type: 'text', 
+            content: 'Dear {{customer.name}},', 
+            style: { textAlign: 'left', fontSize: '16px', color: '#4B5563', marginBottom: '10px' } 
+          },
+          { 
+            id: 103, 
+            type: 'text', 
+            content: 'Please find below the payment details for invoice #{{invoice.number}}.', 
+            style: { textAlign: 'left', fontSize: '16px', color: '#4B5563', marginBottom: '20px' } 
+          },
+          {
+            id: 105,
+            type: 'box',
+            content: 'Amount Due: {{invoice.amount}}',
+            style: { 
+              backgroundColor: '#F3F4F6', 
+              padding: '15px', 
+              borderRadius: '8px', 
+              textAlign: 'center', 
+              fontWeight: 'bold', 
+              fontSize: '20px', 
+              color: '#1F2937',
+              border: '1px solid #E5E7EB',
+              marginBottom: '20px'
+            }
+          },
+          { 
+            id: 104, 
+            type: 'button', 
+            content: 'Pay Online Now', 
+            style: { textAlign: 'center', backgroundColor: 'var(--brand-color)', color: '#FFFFFF', borderRadius: '6px', padding: '14px 32px', display: 'inline-block', fontWeight: '600', fontSize: '16px' } 
+          },
+          {
+            id: 106,
+            type: 'text',
+            content: 'Or scan the code to pay:',
+            style: { textAlign: 'center', fontSize: '14px', color: '#9CA3AF', marginTop: '30px', marginBottom: '10px' }
+          },
+          {
+            id: 107,
+            type: 'qrcode', // Custom type for mockup
+            content: 'QR Placeholder',
+            style: { textAlign: 'center' }
+          }
+        ];
+
+        // --- MAIN COMPONENT ---
+
+        function App() {
+          const [blocks, setBlocks] = useState(INITIAL_BLOCKS);
+          const [selectedBlockId, setSelectedBlockId] = useState(null);
+          const [activeTab, setActiveTab] = useState('editor'); 
+          const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+          const [stationery, setStationery] = useState('corporate');
+          
+          // WOW FACTOR STATES
+          const [brandColor, setBrandColor] = useState('#059669');
+          const [isMobileView, setIsMobileView] = useState(false);
+          const [showRealData, setShowRealData] = useState(false);
+
+          const selectedBlock = blocks.find(b => b.id === selectedBlockId);
+
+          const updateBlockContent = (id, newContent) => {
+            setBlocks(blocks.map(b => b.id === id ? { ...b, content: newContent } : b));
+          };
+
+          const updateBlockStyle = (id, newStyle) => {
+            setBlocks(blocks.map(b => b.id === id ? { ...b, style: { ...b.style, ...newStyle } } : b));
+          };
+
+          const deleteBlock = (id) => {
+            setBlocks(blocks.filter(b => b.id !== id));
+            if (selectedBlockId === id) setSelectedBlockId(null);
+          };
+
+          const addBlock = (type) => {
+            const newBlock = {
+              id: Date.now(),
+              type,
+              content: type === 'button' ? 'Click Me' : type === 'header' ? 'New Header' : type === 'qrcode' ? 'QR Placeholder' : 'New Text',
+              style: type === 'button' 
+                ? { textAlign: 'center', backgroundColor: 'var(--brand-color)', color: '#FFFFFF', borderRadius: '6px', padding: '10px 20px', display: 'inline-block' }
+                : type === 'box' 
+                ? { backgroundColor: '#F3F4F6', padding: '15px', borderRadius: '8px', textAlign: 'center' }
+                : { textAlign: 'left', fontSize: '16px', color: '#374151' }
+            };
+            setBlocks([...blocks, newBlock]);
+          };
+
+          const renderStationery = () => {
+            switch (stationery) {
+              case 'corporate':
+                return (
+                  <React.Fragment>
+                    <div className="absolute top-0 left-0 right-0 h-24 px-10 py-8 flex justify-between items-start pointer-events-none select-none border-b border-gray-50 transition-all duration-300">
+                       <div className="flex items-center space-x-3 opacity-80">
+                          <div className="w-8 h-8 rounded flex items-center justify-center text-white transition-colors duration-300" style={{ backgroundColor: brandColor }}>
+                            <ImageIcon size={16}/>
+                          </div>
+                          <div className="text-sm text-gray-800 font-bold tracking-widest uppercase">Company Ltd.</div>
+                       </div>
+                       <div className="text-right text-[10px] text-gray-400 leading-tight font-medium">
+                          123 Business Rd.<br/>Finance District<br/>London, UK
+                       </div>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 h-16 border-t border-gray-100 flex items-center justify-center pointer-events-none select-none bg-white">
+                       <span className="text-[10px] text-gray-300 font-medium">Registered in EU • VAT: EU123456789 • Powered by POM</span>
+                    </div>
+                  </React.Fragment>
+                );
+              case 'bold':
+                return (
+                   <div className="absolute top-0 bottom-0 left-0 w-3 z-0 transition-colors duration-300" style={{ backgroundColor: brandColor }}></div>
+                );
+              default:
+                return null;
+            }
+          };
+
+          const processContent = (content) => {
+            if (showRealData) {
+              let processed = content;
+              Object.keys(MOCK_DATA).forEach(key => {
+                processed = processed.replace(new RegExp(key, 'g'), MOCK_DATA[key]);
+              });
+              return processed.replace(/{{(.*?)}}/g, '[DATA]');
+            } else {
+              return content.replace(
+                /{{(.*?)}}/g, 
+                `<span class="font-medium bg-opacity-10 px-1 rounded border border-opacity-20" style="color: ${brandColor}; background-color: ${brandColor}1A; border-color: ${brandColor}33">{{$1}}</span>`
+              );
+            }
+          };
+
+          return (
+            <div className="flex h-screen bg-gray-100 font-sans text-gray-900 overflow-hidden">
+              
+              {/* GLOBAL PORTAL SIDEBAR */}
+              <aside className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} bg-[#0F172A] text-white flex flex-col transition-all duration-300 z-30`}>
+                <div className="h-16 flex items-center px-4 border-b border-gray-700/50">
+                  <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">P</div>
+                  {!isSidebarCollapsed && <span className="ml-3 font-bold text-lg tracking-tight">POM Portal</span>}
+                </div>
+
+                <nav className="flex-1 py-6 px-3 space-y-1">
+                  {[
+                    { icon: Home, label: 'Dashboard', active: false },
+                    { icon: PieChart, label: 'Transactions', active: false },
+                    { icon: Users, label: 'Customers', active: false },
+                    { icon: FileText, label: 'Templates', active: true },
+                    { icon: Settings, label: 'Settings', active: false },
+                  ].map((item) => (
+                    <button 
+                      key={item.label}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${item.active ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+                    >
+                      <item.icon size={20} strokeWidth={1.5} />
+                      {!isSidebarCollapsed && <span className="ml-3">{item.label}</span>}
+                    </button>
+                  ))}
+                </nav>
+
+                <div className="p-4 border-t border-gray-700/50 space-y-2">
+                   <button 
+                     onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                     className="w-full flex items-center px-3 py-2 text-gray-400 hover:text-white transition-colors"
+                   >
+                      {isSidebarCollapsed ? <ChevronLeft className="rotate-180" size={20} /> : <ChevronLeft size={20} />}
+                      {!isSidebarCollapsed && <span className="ml-3 text-sm">Collapse</span>}
+                   </button>
+                </div>
+              </aside>
+
+              {/* MAIN LAYOUT */}
+              <div className="flex-1 flex flex-col min-w-0">
+                
+                {/* GLOBAL HEADER */}
+                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shadow-sm z-20">
+                  <div>
+                    <div className="flex items-center text-sm text-gray-500 mb-0.5 space-x-2">
+                      <span>Templates</span>
+                      <ChevronLeft size={12} className="rotate-180" />
+                      <span>Email Templates</span>
+                    </div>
+                    <h1 className="text-xl font-bold text-gray-900">Invoice Reminder - Friendly</h1>
+                  </div>
+
+                  <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 py-1 border border-gray-200" title="Demo: Change Template Brand Color">
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Template Theme</span>
+                      <input 
+                        type="color" 
+                        value={brandColor}
+                        onChange={(e) => setBrandColor(e.target.value)}
+                        className="w-6 h-6 rounded-full border-none cursor-pointer bg-transparent"
+                      />
+                    </div>
+                    <div className="h-6 w-px bg-gray-200"></div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                      <input 
+                        type="text" 
+                        placeholder="Search..." 
+                        className="pl-9 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm focus:ring-2 focus:ring-emerald-500 w-64 transition-shadow"
+                      />
+                    </div>
+                    <div className="h-8 w-8 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center font-bold text-sm text-emerald-700">
+                      JD
+                    </div>
+                  </div>
+                </header>
+
+                {/* CONTENT WRAPPER */}
+                <main className="flex-1 flex flex-col p-6 overflow-hidden">
+                  <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                    
+                    {/* TOOLBAR */}
+                    <div className="h-14 border-b border-gray-200 flex items-center justify-between px-4 bg-gray-50/50">
+                      <div className="flex items-center space-x-4">
+                         <div className="flex items-center space-x-1 bg-gray-200/50 p-1 rounded-lg">
+                            <button 
+                              onClick={() => setActiveTab('editor')}
+                              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'editor' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-600 hover:text-gray-900'}`}
+                            >
+                              Editor
+                            </button>
+                            <button 
+                              onClick={() => setActiveTab('preview')}
+                              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'preview' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-600 hover:text-gray-900'}`}
+                            >
+                              Preview
+                            </button>
+                         </div>
+
+                         <div className="h-6 w-px bg-gray-300"></div>
+
+                         <div className="flex items-center space-x-1">
+                            <button onClick={() => setIsMobileView(false)} className={`p-2 rounded-md transition-colors ${!isMobileView ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}>
+                              <Monitor size={18} />
+                            </button>
+                            <button onClick={() => setIsMobileView(true)} className={`p-2 rounded-md transition-colors ${isMobileView ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}>
+                              <Smartphone size={18} />
+                            </button>
+                         </div>
+
+                         <div className="flex items-center space-x-2 ml-4">
+                            <label className="flex items-center cursor-pointer select-none">
+                              <div className="relative">
+                                <input type="checkbox" className="sr-only" checked={showRealData} onChange={() => setShowRealData(!showRealData)} />
+                                <div className={`block w-10 h-6 rounded-full transition-colors duration-300 ${showRealData ? 'bg-emerald-500 opacity-100' : 'bg-gray-300'}`}></div>
+                                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showRealData ? 'transform translate-x-4' : ''}`}></div>
+                              </div>
+                              <div className="ml-2 text-xs font-medium text-gray-600 flex items-center">
+                                <Eye size={14} className="mr-1" />
+                                {showRealData ? 'Showing Data' : 'Show Placeholders'}
+                              </div>
+                            </label>
+                         </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3">
+                         <span className="text-xs text-gray-400">Last saved just now</span>
+                         <button className="flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium shadow-sm transition-all hover:bg-emerald-700">
+                           <Save size={16} className="mr-2" />
+                           Save Template
+                         </button>
+                      </div>
+                    </div>
+
+                    {/* TWO COLUMN EDITOR */}
+                    <div className="flex-1 flex overflow-hidden">
+                      
+                      {/* LEFT: CANVAS */}
+                      <div className="flex-1 bg-gray-100/50 overflow-y-auto p-8 flex justify-center relative transition-colors duration-500">
+                         <div 
+                           className={`bg-white shadow-xl transition-all duration-500 ease-in-out flex flex-col relative ${isMobileView ? 'w-[375px] rounded-[30px] border-[8px] border-gray-800' : 'w-[580px]'}`}
+                           style={{ 
+                             minHeight: isMobileView ? '667px' : '800px', 
+                             height: 'fit-content',
+                             '--brand-color': brandColor
+                           }}
+                         >
+                            {renderStationery()}
+
+                            <div className={`relative z-10 px-10 space-y-1 flex-1 ${stationery === 'corporate' && !isMobileView ? 'py-28' : 'py-10'}`}>
+                              {blocks.map((block) => (
+                                <div 
+                                  key={block.id}
+                                  onClick={() => setSelectedBlockId(block.id)}
+                                  className={`relative group border-2 border-transparent transition-all ${activeTab === 'editor' ? 'hover:border-dashed cursor-pointer' : ''} ${selectedBlockId === block.id && activeTab === 'editor' ? 'bg-emerald-50/10' : ''}`}
+                                  style={{ 
+                                    marginBottom: '8px', 
+                                    borderColor: selectedBlockId === block.id && activeTab === 'editor' ? '#10B981' : 'transparent',
+                                  }}
+                                >
+                                   {activeTab === 'editor' && selectedBlockId === block.id && (
+                                     <div className="absolute -right-8 top-0">
+                                       <button onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }} className="p-1.5 bg-white border border-gray-200 rounded text-red-500 hover:bg-red-50 shadow-sm"><Trash2 size={14} /></button>
+                                     </div>
+                                   )}
+
+                                   <div style={block.style}>
+                                      {block.type === 'qrcode' ? (
+                                        <div className="inline-flex items-center justify-center bg-white p-2 border border-gray-100 rounded-lg shadow-sm">
+                                          <QrCode size={96} className="text-gray-800" />
+                                        </div>
+                                      ) : block.type === 'image' ? (
+                                        <div className="flex justify-center p-2 bg-gray-50 border border-dashed border-gray-300 rounded text-gray-400 text-xs">
+                                          [Logo Placeholder]
+                                        </div>
+                                      ) : (
+                                        <div dangerouslySetInnerHTML={{ __html: processContent(block.content) }} />
+                                      )}
+                                   </div>
+                                </div>
+                              ))}
+
+                              {activeTab === 'editor' && (
+                                <div 
+                                  className="mt-8 border-2 border-dashed border-gray-200 rounded-lg p-6 text-center transition-colors cursor-pointer group hover:border-emerald-400"
+                                  onClick={() => addBlock('text')}
+                                >
+                                   <span className="text-sm text-gray-400 group-hover:text-gray-600">Click a tool on the right to add more blocks</span>
+                                </div>
+                              )}
+                            </div>
+                         </div>
+                      </div>
+
+                      {/* RIGHT: TOOLS */}
+                      {activeTab === 'editor' && (
+                        <div className="w-80 bg-white border-l border-gray-200 flex flex-col z-10 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                          
+                          {selectedBlock ? (
+                            <div className="p-5 border-b border-gray-200 bg-gray-50/50">
+                               <div className="flex items-center justify-between mb-4">
+                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Properties</span>
+                                 <button onClick={() => setSelectedBlockId(null)} className="text-xs font-medium text-emerald-600 hover:underline">Done</button>
+                               </div>
+                               
+                               <div className="space-y-4">
+                                 <div>
+                                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Text Content</label>
+                                   <textarea 
+                                     rows={4}
+                                     value={selectedBlock.content}
+                                     onChange={(e) => updateBlockContent(selectedBlock.id, e.target.value)}
+                                     className="w-full text-sm p-3 border border-gray-300 rounded-lg outline-none transition-shadow bg-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                                   />
+                                 </div>
+                                 
+                                 <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Alignment</label>
+                                    <div className="flex bg-white border border-gray-300 rounded-lg overflow-hidden p-0.5">
+                                      {['left', 'center', 'right'].map(align => (
+                                        <button
+                                          key={align}
+                                          onClick={() => updateBlockStyle(selectedBlock.id, { textAlign: align })}
+                                          className={`flex-1 py-1.5 flex justify-center transition-colors ${selectedBlock.style.textAlign === align ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-400 hover:bg-gray-50'}`}
+                                        >
+                                          {align === 'left' && <AlignLeft size={16} />}
+                                          {align === 'center' && <AlignCenter size={16} />}
+                                          {align === 'right' && <AlignRight size={16} />}
+                                        </button>
+                                      ))}
+                                    </div>
+                                 </div>
+                               </div>
+                            </div>
+                          ) : (
+                            <div className="p-6 border-b border-gray-200 bg-emerald-50/10 text-center">
+                               <span className="text-sm font-medium text-emerald-800">Select an item to edit styles</span>
+                            </div>
+                          )}
+
+                          <div className="flex-1 overflow-y-auto p-5">
+                            <div className="mb-8">
+                              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Stationery Layout</h3>
+                              <div className="grid grid-cols-3 gap-2">
+                                {[
+                                  { id: 'blank', label: 'Blank', icon: File },
+                                  { id: 'corporate', label: 'Corp.', icon: Layout },
+                                  { id: 'bold', label: 'Bold', icon: ImageIcon },
+                                ].map((stat) => (
+                                   <button
+                                      key={stat.id}
+                                      onClick={() => setStationery(stat.id)}
+                                      className={`flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-medium transition-all ${stationery === stat.id ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                                   >
+                                      <div className="mb-1">
+                                        {stat.id === 'blank' && <div className="w-6 h-8 border border-gray-300 bg-white rounded-sm"></div>}
+                                        {stat.id === 'corporate' && <div className="w-6 h-8 border border-gray-300 bg-white rounded-sm flex flex-col justify-between p-[2px]"><div className="w-full h-1 bg-gray-300"></div><div className="w-full h-1 bg-gray-300"></div></div>}
+                                        {stat.id === 'bold' && <div className="w-6 h-8 border border-gray-300 bg-white rounded-sm border-l-4" style={{ borderLeftColor: brandColor }}></div>}
+                                      </div>
+                                      {stat.label}
+                                   </button>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div className="mb-8">
+                              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Drag & Drop Blocks</h3>
+                              <div className="grid grid-cols-2 gap-3">
+                                {[
+                                  { type: 'header', icon: Type, label: 'Heading' },
+                                  { type: 'text', icon: AlignLeft, label: 'Text' },
+                                  { type: 'image', icon: ImageIcon, label: 'Logo' },
+                                  { type: 'button', icon: CreditCard, label: 'Pay Button' },
+                                  { type: 'qrcode', icon: QrCode, label: 'QR Code' },
+                                  { type: 'box', icon: Layout, label: 'Info Box' },
+                                ].map((tool) => (
+                                  <button 
+                                    key={tool.type}
+                                    onClick={() => addBlock(tool.type)}
+                                    className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all group hover:border-emerald-500"
+                                  >
+                                    <tool.icon size={24} className="mb-2 text-gray-400 transition-colors group-hover:text-emerald-500" />
+                                    <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900">{tool.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div>
+                              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Data Fields</h3>
+                              <div className="space-y-2">
+                                {VARIABLES.map(v => (
+                                  <div 
+                                    key={v.key} 
+                                    className="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-200 rounded-lg transition-colors group cursor-copy hover:bg-white hover:shadow-sm hover:border-emerald-300" 
+                                    onClick={() => navigator.clipboard.writeText(v.key)}
+                                  >
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-1.5 h-1.5 rounded-full transition-colors" style={{ backgroundColor: brandColor }}></div>
+                                      <span className="text-xs font-medium text-gray-700">{v.label}</span>
+                                    </div>
+                                    <span className="text-[10px] text-gray-400 font-mono transition-colors group-hover:text-emerald-600">Copy</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </main>
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
