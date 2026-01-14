@@ -21,6 +21,20 @@
         }
       }
     </script>
+    <style>
+      /* Smooth transitions for drag interactions */
+      .block-transition {
+        transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s, background-color 0.2s;
+      }
+      .dragging {
+        opacity: 0.5;
+        transform: scale(0.98);
+      }
+      /* Prevent text selection while dragging */
+      .no-select {
+        user-select: none;
+      }
+    </style>
 </head>
 <body class="bg-gray-100">
     <div id="root"></div>
@@ -125,6 +139,10 @@
           const [isMobileView, setIsMobileView] = useState(false);
           const [showRealData, setShowRealData] = useState(false);
 
+          // DRAG AND DROP STATE
+          const [draggingBlockId, setDraggingBlockId] = useState(null);
+          const [dragOverBlockId, setDragOverBlockId] = useState(null);
+
           const selectedBlock = blocks.find(b => b.id === selectedBlockId);
 
           const updateBlockContent = (id, newContent) => {
@@ -152,6 +170,47 @@
                 : { textAlign: 'left', fontSize: '16px', color: '#374151' }
             };
             setBlocks([...blocks, newBlock]);
+          };
+
+          // --- DRAG AND DROP HANDLERS ---
+          
+          const handleDragStart = (e, id) => {
+            setDraggingBlockId(id);
+            // Cleaner drag image (optional, but setting effectAllowed helps)
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", id);
+          };
+
+          const handleDragOver = (e, id) => {
+            e.preventDefault(); 
+            // Only update if it's a different block and we aren't hovering over the item we are dragging
+            if (id !== draggingBlockId && id !== dragOverBlockId) {
+                setDragOverBlockId(id);
+            }
+          };
+
+          const handleDragEnd = () => {
+             setDraggingBlockId(null);
+             setDragOverBlockId(null);
+          };
+
+          const handleDrop = (e, targetId) => {
+            e.preventDefault();
+            setDragOverBlockId(null);
+            
+            if (draggingBlockId === null) return;
+            if (draggingBlockId === targetId) return;
+
+            const newBlocks = [...blocks];
+            const draggedIndex = newBlocks.findIndex(b => b.id === draggingBlockId);
+            const targetIndex = newBlocks.findIndex(b => b.id === targetId);
+
+            const [draggedItem] = newBlocks.splice(draggedIndex, 1);
+            // Insert at the new position
+            newBlocks.splice(targetIndex, 0, draggedItem);
+
+            setBlocks(newBlocks);
+            setDraggingBlockId(null);
           };
 
           const renderStationery = () => {
@@ -353,16 +412,28 @@
                               {blocks.map((block) => (
                                 <div 
                                   key={block.id}
+                                  draggable={activeTab === 'editor'}
+                                  onDragStart={(e) => handleDragStart(e, block.id)}
+                                  onDragOver={(e) => handleDragOver(e, block.id)}
+                                  onDragEnd={handleDragEnd}
+                                  onDrop={(e) => handleDrop(e, block.id)}
                                   onClick={() => setSelectedBlockId(block.id)}
-                                  className={`relative group border-2 border-transparent transition-all ${activeTab === 'editor' ? 'hover:border-dashed cursor-pointer' : ''} ${selectedBlockId === block.id && activeTab === 'editor' ? 'bg-emerald-50/10' : ''}`}
-                                  style={{ 
-                                    marginBottom: '8px', 
-                                    borderColor: selectedBlockId === block.id && activeTab === 'editor' ? '#10B981' : 'transparent',
-                                  }}
+                                  /* Updated Classes: block-transition, ring instead of border-color, visual drop line via absolute div below */
+                                  className={`relative group block-transition border border-transparent rounded-sm ${activeTab === 'editor' ? 'cursor-pointer hover:border-gray-200 hover:border-dashed' : ''} ${selectedBlockId === block.id && activeTab === 'editor' ? 'ring-2 ring-emerald-500 ring-offset-2 z-10' : ''} ${draggingBlockId === block.id ? 'opacity-30' : ''} no-select`}
+                                  style={{ marginBottom: '8px' }}
                                 >
+                                   {/* Drop Indicator Line: Absolute positioned to prevent layout shift */}
+                                   {dragOverBlockId === block.id && draggingBlockId !== block.id && (
+                                      <div className="absolute -top-[6px] left-0 right-0 h-[3px] bg-emerald-500 shadow-sm z-20 pointer-events-none rounded-full"></div>
+                                   )}
+
                                    {activeTab === 'editor' && selectedBlockId === block.id && (
-                                     <div className="absolute -right-8 top-0">
+                                     <div className="absolute -right-8 top-0 flex flex-col space-y-1">
                                        <button onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }} className="p-1.5 bg-white border border-gray-200 rounded text-red-500 hover:bg-red-50 shadow-sm"><Trash2 size={14} /></button>
+                                       {/* Drag Handle Visual Cue */}
+                                       <div className="p-1.5 bg-white border border-gray-200 rounded text-gray-500 shadow-sm cursor-grab" title="Drag to reorder">
+                                          <Move size={14} />
+                                       </div>
                                      </div>
                                    )}
 
